@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <title>Gemlight Keep</title>
 <style>
 html,body{margin:0;height:100%;background:#0b0612;color:#eee;font-family:system-ui,-apple-system,Segoe UI,sans-serif;overflow:hidden}
 #wrap{position:relative;width:960px;height:544px;margin:0 auto;top:50%;transform:translateY(-50%)}
-@media (max-width:980px),(max-height:560px){#wrap{transform:translateY(-50%) scale(calc(min(100vw / 960px, 100vh / 544px)))}}
 canvas#c{display:block;width:960px;height:544px;image-rendering:pixelated;border-radius:6px;outline:none}
 #ui{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .panel{pointer-events:auto;background:rgba(15,8,28,.88);border:1px solid #5a189a;border-radius:14px;padding:12px 22px;max-width:880px;max-height:536px;overflow:auto;text-align:center;box-shadow:0 0 30px #7b2cbf55}
@@ -22,6 +21,29 @@ button.big{min-width:260px;font-size:18px;padding:10px}input,select{background:#
 .lgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0}.lcard{background:#1b1030;border:2px solid #3c096c;border-radius:10px;padding:5px;font-size:12px;cursor:pointer}.lcard.locked{opacity:.65}.lcard.boss{border-color:#c92a2a}.diff{color:#ffd43b;letter-spacing:1px}.tg{font-size:10px;color:#c77dff}h3{margin:10px 0 2px;font-size:15px}code{color:#5ce1e6}
 .code{font-family:monospace;font-size:34px;color:#5ce1e6;letter-spacing:6px}.lp{background:#1b1030;padding:6px 14px;border-radius:6px;min-width:300px}
 .flash{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:#c92a2a;padding:8px 14px;border-radius:8px;pointer-events:none}
+/* ---- touch / small-screen (only active with body.touch or when the window is smaller than the game) ---- */
+body.touch{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;touch-action:none;position:fixed;inset:0}
+body.touch input{-webkit-user-select:text;user-select:text;font-size:16px}body.touch select{font-size:16px}
+body.touch button{touch-action:manipulation}body.touch button:hover{background:#3c096c}body.touch button:active{background:#5a189a}
+body.touch #wrap,body.touch canvas#c{touch-action:none;-webkit-touch-callout:none}
+#ui.tui{position:fixed;inset:0;z-index:5}
+#ui.tui .panel{max-width:calc(100vw - 16px);max-height:calc(100% - 16px);box-sizing:border-box;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#ui.tui button.big{min-width:min(260px,70vw)}
+@media (max-width:560px){#ui.tui .panel{padding:10px 10px}#ui.tui h1{font-size:32px}#ui.tui .grid,#ui.tui .lgrid{grid-template-columns:repeat(4,1fr)}#ui.tui .row{flex-wrap:wrap}}
+@media (max-height:460px){#ui.tui .panel{padding:6px 14px}#ui.tui h1{font-size:28px;margin:0}#ui.tui .sub{margin-bottom:4px}#ui.tui .col{gap:5px}#ui.tui .row{margin:4px 0}#ui.tui button.big{padding:6px 10px;font-size:16px}#ui.tui .help{margin-top:4px}}
+#touch{display:none;position:fixed;inset:0;z-index:4;pointer-events:none}
+body.touch.playing:not(.kbd) #touch{display:block}
+#touch .tb,#touch #pad{position:absolute;pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;box-sizing:border-box}
+#touch .tb{width:68px;height:68px;border-radius:50%;background:rgba(20,10,40,.45);border:2px solid rgba(199,125,255,.75);color:#fff;font:bold 13px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05;text-shadow:0 1px 2px #000}
+#touch .tb.on{background:rgba(157,78,221,.75);border-color:#fff}#touch .tb.dim{opacity:.35}
+#touch #tJ{width:84px;height:84px;right:16px;bottom:18px;font-size:15px}#touch #tA{right:110px;bottom:12px}#touch #tI{right:112px;bottom:92px}#touch #tS{right:24px;bottom:112px;font-size:11px}
+#touch #tP{width:44px;height:36px;border-radius:10px;left:50%;top:4px;transform:translateX(-50%);font-size:14px}
+#touch #pad{left:14px;bottom:14px;width:156px;height:156px;border-radius:50%;background:rgba(20,10,40,.35);border:2px solid rgba(199,125,255,.55)}
+#touch #pad .ar{position:absolute;color:rgba(255,255,255,.85);font-size:22px;text-shadow:0 1px 2px #000}#touch #pad .ar.on{color:#5ce1e6}
+#touch #pad .l{left:12px;top:62px}#touch #pad .r{right:12px;top:62px}#touch #pad .d{left:66px;bottom:8px}#touch #pad .dl{position:absolute;left:0;right:0;bottom:32px;text-align:center;font-size:9px;color:rgba(255,255,255,.6)}
+#touch #knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(199,125,255,.5);border:2px solid #fff}
+#rot{display:none;position:fixed;left:0;right:0;top:46px;text-align:center;font-size:13px;color:#c77dff;pointer-events:none;z-index:3}
+@media (orientation:portrait){body.touch.playing #rot{display:block}}
 </style></head><body>
 <div id="wrap"><canvas id="c" width="960" height="544" tabindex="0"></canvas><div id="ui"></div></div>
 <script id="shared">
@@ -161,7 +183,7 @@ const levelUnlocked=n=>n===1||prof.unlockedLevels.indexOf(n)>=0;
 function fixSel(){[0,1].forEach(i=>{if(!isUnlocked(save.sel[i]))save.sel[i]=i;});}fixSel();
 // ---------- input ----------
 const keys=new Set(),tapped=new Set();
-addEventListener('keydown',e=>{if(e.target&&e.target.tagName==='INPUT')return;keys.add(e.code);tapped.add(e.code);
+addEventListener('keydown',e=>{if(e.target&&e.target.tagName==='INPUT')return;keys.add(e.code);tapped.add(e.code);if(TOUCH&&!e.repeat&&e.code!=='Escape')document.body.classList.add('kbd');
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].indexOf(e.code)>=0)e.preventDefault();
   if(e.code==='Escape'&&G.mode==='play')togglePause();});
 addEventListener('keyup',e=>keys.delete(e.code));
@@ -169,13 +191,63 @@ addEventListener('blur',()=>keys.clear());
 const MAPS={kb1:{l:['KeyA'],r:['KeyD'],j:['KeyW'],a:['KeyF'],i:['KeyG'],u:['KeyS'],s:['KeyE']},
   kb2:{l:['ArrowLeft'],r:['ArrowRight'],j:['ArrowUp'],a:['KeyK','Numpad1'],i:['KeyL','Numpad2'],u:['ArrowDown'],s:['KeyJ','Numpad3']}};
 MAPS.all={};for(const k in MAPS.kb1)MAPS.all[k]=MAPS.kb1[k].concat(MAPS.kb2[k]);MAPS.all.j=MAPS.all.j.concat(['Space']);
-const LABEL={kb1:{a:'F',i:'G',u:'S',s:'E'},kb2:{a:'K',i:'L',u:'↓',s:'J'},all:{a:'F',i:'G',u:'S',s:'E'}};
+const LABEL={kb1:{a:'F',i:'G',u:'S',s:'E'},kb2:{a:'K',i:'L',u:'↓',s:'J'},all:{a:'F',i:'G',u:'S',s:'E'},touch:{a:'ATK',i:'ITEM',u:'▼',s:'SPEC'}};
 function readInput(p){const m=MAPS[p.ctrl],any=a=>a.some(k=>keys.has(k)||tapped.has(k));
   let l=any(m.l),r=any(m.r),j=any(m.j),a=any(m.a),it=any(m.i),u=any(m.u),s=any(m.s);
   if(p.pad!=null&&navigator.getGamepads){const gp=navigator.getGamepads()[p.pad];if(gp){const ax=gp.axes[0]||0,ay=gp.axes[1]||0,b=i=>gp.buttons[i]&&gp.buttons[i].pressed;
     l=l||ax<-0.4||b(14);r=r||ax>0.4||b(15);j=j||b(0)||b(12);a=a||b(2);it=it||b(1);u=u||ay>0.6||b(13);s=s||b(3)||b(5);}}
   const pv=p.prevIn||{},c={x:(r?1:0)-(l?1:0),j,a,i:it,u,s};
   c.jp=j&&!pv.j;c.ap=a&&!pv.a;c.ip=it&&!pv.i;c.upr=u&&!pv.u;c.sp=s&&!pv.s;p.prevIn=c;return c;}
+// ---------- touch / small screens ----------
+// Touch devices get an on-screen pad + buttons that feed the SAME P1 key codes (KeyA/KeyD/KeyS/KeyW/KeyF/KeyG/KeyE) into keys/tapped,
+// so solo, P1 of local co-op and online rooms all work unchanged. Desktop (no touch) never builds the overlay.
+const TQ=qs.get('touch'),TOUCH=TQ==='1'||(TQ!=='0'&&(matchMedia('(pointer: coarse)').matches||('ontouchstart' in window&&!matchMedia('(any-pointer: fine)').matches)));
+const wrapEl=document.getElementById('wrap');
+function fitScreen(){const vw=innerWidth,vh=innerHeight;
+  if(!TOUCH&&vw>980&&vh>560){wrapEl.style.cssText='';return;}
+  const portrait=vh>vw,room=TOUCH&&portrait?Math.max(0,vh-200):vh,s=Math.min(vw/VW,(TOUCH&&portrait?room:vh)/VH);
+  const top=TOUCH&&portrait?Math.max(70,(room-VH*s)/2):(vh-VH*s)/2;
+  wrapEl.style.cssText='position:absolute;margin:0;left:'+((vw-VW*s)/2)+'px;top:'+top+'px;transform:scale('+s+');transform-origin:0 0';}
+addEventListener('resize',fitScreen);addEventListener('orientationchange',()=>setTimeout(fitScreen,200));if(window.visualViewport)visualViewport.addEventListener('resize',fitScreen);fitScreen();
+const TK=new Map();// source -> Set of key codes held by that touch source
+function touchSet(src,codes){const prev=TK.get(src)||new Set(),nx=new Set(codes);
+  for(const c of nx)if(!prev.has(c)){keys.add(c);tapped.add(c);}
+  for(const c of prev)if(!nx.has(c)){let other=false;for(const [k,v] of TK)if(k!==src&&v.has(c))other=true;if(!other)keys.delete(c);}
+  TK.set(src,nx);}
+function touchClear(){for(const v of TK.values())for(const c of v)keys.delete(c);TK.clear();if(TOUCH)document.querySelectorAll('#touch .on').forEach(e=>e.classList.remove('on'));}
+function onPauseBtn(){if(G.mode!=='play')return;if(G.paused){resumeGame();return;}touchClear();togglePause();if(G.paused)showPausePanel();}
+function showPausePanel(){const pn=panel('<h2>Paused</h2><div class="col" id="pb"></div>');pn.id='pausep';pn.querySelector('#pb').append(btn('Resume',resumeGame,'big'),btn('Quit to title',quitToTitle,'big'));}
+function resumeGame(){G.paused=false;const p=document.getElementById('pausep');if(p)ui.innerHTML='';}
+if(TOUCH){document.body.classList.add('touch');document.body.appendChild(ui);ui.classList.add('tui');
+  const t=document.createElement('div');t.id='touch';
+  t.innerHTML='<div id="pad"><span class="ar l">◀</span><span class="ar r">▶</span><span class="ar d">▼</span><div class="dl">interact</div><div id="knob"></div></div>'+
+    '<div class="tb" id="tJ">JUMP</div><div class="tb" id="tA">ATK</div><div class="tb" id="tI">ITEM</div><div class="tb" id="tS">SPECIAL</div><div class="tb" id="tP">❚❚</div>';
+  document.body.appendChild(t);const r=document.createElement('div');r.id='rot';r.textContent='↻ Rotate to landscape for a bigger view';document.body.appendChild(r);
+  const pad=t.querySelector('#pad'),knob=t.querySelector('#knob'),ar={l:pad.querySelector('.l'),r:pad.querySelector('.r'),d:pad.querySelector('.d')};let padId=null;
+  const padMove=e=>{const b=pad.getBoundingClientRect(),cx0=b.left+b.width/2,cy0=b.top+b.height/2,R=b.width/2;let dx=e.clientX-cx0,dy=e.clientY-cy0;
+    const d=Math.hypot(dx,dy),k=d>R*0.62?R*0.62/d:1;knob.style.transform='translate('+(dx*k)+'px,'+(dy*k)+'px)';
+    const down=dy>22&&Math.abs(dx)<dy*1.1,codes=[];if(!down&&dx<-14)codes.push('KeyA');if(!down&&dx>14)codes.push('KeyD');if(down)codes.push('KeyS');
+    ar.l.classList.toggle('on',codes.indexOf('KeyA')>=0);ar.r.classList.toggle('on',codes.indexOf('KeyD')>=0);ar.d.classList.toggle('on',down);touchSet('pad',codes);};
+  const padEnd=e=>{if(e.pointerId!==padId)return;padId=null;knob.style.transform='';ar.l.classList.remove('on');ar.r.classList.remove('on');ar.d.classList.remove('on');touchSet('pad',[]);};
+  pad.addEventListener('pointerdown',e=>{e.preventDefault();document.body.classList.remove('kbd');padId=e.pointerId;try{pad.setPointerCapture(e.pointerId);}catch(_){}padMove(e);});
+  pad.addEventListener('pointermove',e=>{if(e.pointerId===padId){e.preventDefault();padMove(e);}});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(n=>pad.addEventListener(n,padEnd));
+  const bind=(id,code)=>{const el=t.querySelector('#'+id),ids=new Set();
+    el.addEventListener('pointerdown',e=>{e.preventDefault();document.body.classList.remove('kbd');ids.add(e.pointerId);try{el.setPointerCapture(e.pointerId);}catch(_){}el.classList.add('on');touchSet(id,[code]);});
+    const up=e=>{if(!ids.delete(e.pointerId))return;if(!ids.size){el.classList.remove('on');touchSet(id,[]);}};
+    ['pointerup','pointercancel','lostpointercapture'].forEach(n=>el.addEventListener(n,up));};
+  bind('tJ','KeyW');bind('tA','KeyF');bind('tI','KeyG');bind('tS','KeyE');
+  t.querySelector('#tP').addEventListener('pointerdown',e=>{e.preventDefault();onPauseBtn();});
+  // stop page scroll / pinch / double-tap zoom / long-press menu outside scrollable panels
+  const inPanel=e=>e.target&&e.target.closest&&e.target.closest('.panel,input,select');
+  document.addEventListener('touchmove',e=>{if(!inPanel(e)||e.touches.length>1)e.preventDefault();},{passive:false});
+  document.addEventListener('touchstart',e=>{if(e.touches.length>1&&!e.target.closest('#touch'))e.preventDefault();},{passive:false});
+  ['gesturestart','gesturechange','dblclick','contextmenu'].forEach(n=>document.addEventListener(n,e=>e.preventDefault(),{passive:false}));
+  addEventListener('blur',touchClear);document.addEventListener('visibilitychange',()=>{if(document.hidden)touchClear();});}
+function touchSync(){if(!TOUCH)return;const pl=G.mode==='play';document.body.classList.toggle('playing',pl);
+  if(pl){const p=me(),sh=p&&GK.CHARS[p.ci].ability==='shadow',el=document.getElementById('tS');if(el&&el.dataset.sh!==String(sh)){el.dataset.sh=String(sh);el.textContent=sh?'SHADOW STEP':'SPECIAL';el.classList.toggle('dim',!sh);}
+    if(!G.paused&&document.getElementById('pausep'))ui.innerHTML='';}
+  else if(TK.size)touchClear();}
 // ---------- game state ----------
 const G={ws:null,cfg:{},mode:'menu',kind:null,L:null,players:[],world:null,camX:0,time:0,parts:[],ghosts:[],banner:null,toast:null,net:null,paused:false,victory:false,errors:[]};
 window.GKT={G,GK,save,keys,get prof(){return prof;}};
@@ -465,15 +537,15 @@ function render(){const W=G.world,L=G.L;cx.setTransform(1,0,0,1,0,0);
   {const B=W.boss;if(B&&B.active&&!B.dead){cx.fillStyle='rgba(0,0,0,0.6)';cx.fillRect(VW/2-160,70,320,22);cx.fillStyle='#c92a2a';cx.fillRect(VW/2-156,74,312*B.hp/B.max,14);cx.fillStyle='#fff';cx.font='bold 12px sans-serif';cx.textAlign='center';cx.fillText(L.boss.name+'  '+B.hp+'/'+B.max,VW/2,86);}}
   if(G.award&&G.award.t>0){cx.globalAlpha=Math.min(1,G.award.t);cx.fillStyle='rgba(40,20,0,0.75)';cx.font='bold 14px sans-serif';const tw=Math.min(900,cx.measureText(G.award.text).width+24);cx.fillRect(VW/2-tw/2,100,tw,26);cx.fillStyle='#ffe066';cx.textAlign='center';cx.fillText(G.award.text,VW/2,118,880);cx.globalAlpha=1;}
   if(G.banner&&G.banner.t>0){cx.globalAlpha=Math.min(1,G.banner.t);cx.fillStyle='rgba(0,0,0,0.55)';cx.fillRect(0,VH/2-36,VW,64);cx.fillStyle='#fff';cx.font='bold 28px sans-serif';cx.textAlign='center';cx.fillText(G.banner.text,VW/2,VH/2+8);
-    if(G.victory){cx.font='16px sans-serif';cx.fillText((G.kind==='online'?'Profile points: '+prof.points+'  —  ':'Offline mode earns no points  —  ')+'press Esc for the menu',VW/2,VH/2+24);}cx.globalAlpha=1;}
+    if(G.victory){cx.font='16px sans-serif';cx.fillText((G.kind==='online'?'Profile points: '+prof.points+'  —  ':'Offline mode earns no points  —  ')+(TOUCH?'tap ❚❚ for the menu':'press Esc for the menu'),VW/2,VH/2+24);}cx.globalAlpha=1;}
   if(G.toast&&G.toast.t>0){cx.globalAlpha=Math.min(1,G.toast.t);cx.fillStyle='rgba(0,0,0,0.6)';cx.font='bold 15px sans-serif';const w=cx.measureText(G.toast.text).width+24;cx.fillRect(VW/2-w/2,VH-56,w,30);cx.fillStyle='#fff';cx.textAlign='center';cx.fillText(G.toast.text,VW/2,VH-36);cx.globalAlpha=1;}
-  if(G.paused){cx.fillStyle='rgba(0,0,0,0.6)';cx.fillRect(0,0,VW,VH);cx.fillStyle='#fff';cx.font='bold 32px sans-serif';cx.textAlign='center';cx.fillText('Paused',VW/2,VH/2-10);cx.font='16px sans-serif';cx.fillText('Esc: resume   •   Q: quit to title',VW/2,VH/2+20);if(keys.has('KeyQ')){keys.delete('KeyQ');quitToTitle();}}}
+  if(G.paused){cx.fillStyle='rgba(0,0,0,0.6)';cx.fillRect(0,0,VW,VH);cx.fillStyle='#fff';cx.font='bold 32px sans-serif';cx.textAlign='center';cx.fillText('Paused',VW/2,VH/2-10);cx.font='16px sans-serif';if(!TOUCH)cx.fillText('Esc: resume   •   Q: quit to title',VW/2,VH/2+20);if(keys.has('KeyQ')){keys.delete('KeyQ');quitToTitle();}}}
 function drawHUD(){const W=G.world;
   G.players.forEach((p,i)=>{const x=8+i*232,y=8,ch=GK.CHARS[p.ci],col=['#ff6b6b','#4dabf7','#ffd43b','#69db7c'][p.slot%4];cx.fillStyle='rgba(0,0,0,0.5)';rr(cx,x,y,224,52,8);cx.fill();
     cx.fillStyle=col;cx.font='bold 12px sans-serif';cx.textAlign='left';cx.fillText((G.kind==='online'?p.name:'P'+(p.slot+1))+' · '+ch.name+(p.local&&G.kind==='online'?' (you)':''),x+8,y+16);
     cx.fillStyle=GK.TIERS[ch.tier];cx.font='bold 9px sans-serif';cx.fillText(ch.tier.toUpperCase(),x+8,y+44);
     for(let h=0;h<p.maxhp;h++){const hx=x+10+h*17,hy=y+26;cx.fillStyle=h<p.hp?'#ff6b6b':'#495057';cx.beginPath();cx.moveTo(hx+6,hy+11);cx.bezierCurveTo(hx-6,hy+2,hx+1,hy-5,hx+6,hy+1);cx.bezierCurveTo(hx+11,hy-5,hx+18,hy+2,hx+6,hy+11);cx.fill();}
-    const lb=LABEL[p.ctrl||'all'];cx.fillStyle=p.item?'#ff8fab':'#666';cx.beginPath();cx.arc(x+170,y+32,9,0,7);cx.fill();cx.fillStyle='#fff';cx.font='9px sans-serif';cx.textAlign='center';cx.fillText(p.item?'POT':'—',x+170,y+35);
+    const lb=LABEL[TOUCH&&p.ctrl!=='kb2'?'touch':(p.ctrl||'all')];cx.fillStyle=p.item?'#ff8fab':'#666';cx.beginPath();cx.arc(x+170,y+32,9,0,7);cx.fill();cx.fillStyle='#fff';cx.font='9px sans-serif';cx.textAlign='center';cx.fillText(p.item?'POT':'—',x+170,y+35);
     if(p.local)cx.fillText(lb.i,x+170,y+50);
     if(ch.ability==='shadow'){const k=1-p.stepCd/GK.STEP.cd;cx.fillStyle='#2a0d45';cx.beginPath();cx.arc(x+200,y+32,11,0,7);cx.fill();cx.fillStyle=k>=1?'#c77dff':'#5a189a';cx.beginPath();cx.moveTo(x+200,y+32);cx.arc(x+200,y+32,11,-Math.PI/2,-Math.PI/2+Math.PI*2*k);cx.fill();
       cx.fillStyle='#fff';cx.font='bold 8px sans-serif';cx.fillText(k>=1?'STEP':p.stepCd.toFixed(1),x+200,y+35);if(p.local)cx.fillText(lb.s,x+200,y+52);}
@@ -498,9 +570,9 @@ function profLine(){if(location.protocol==='file:')return'Offline file mode · '
 function showTitle(msg){screen='title';G.mode='menu';G.L=null;const lv=[];for(let i=GK.LEVEL_COUNT;i>=1;i--)if(levelUnlocked(i))lv.push('<option value="'+i+'">Level '+i+'</option>');
   const pn=panel('<h1>Gemlight Keep</h1><div class="sub" id="pline">'+profLine()+'</div>'+(msg?'<div class="msg">'+msg+'</div>':'')+
    '<div id="bt" class="col"></div><div class="row">Start at <select id="lv">'+lv.join('')+'</select></div><div class="row" id="bt2"></div>'+
-   '<div class="help"><b>P1</b> A/D move · W jump · F attack · G item · S interact · E special &nbsp;|&nbsp; <b>P2</b> ←/→ move · ↑ jump · K/Num1 attack · L/Num2 item · ↓ interact · J/Num3 special · Gamepads supported · Esc pause<br>Points are earned only in online rooms (level clears, round wins, boss kills). 1P and Local Co-op play anything already unlocked.</div>');
+   '<div class="help">'+(TOUCH?'<b>Touch</b> left pad: ◀ ▶ move, ▼ interact (hold next to a downed partner to revive) · right buttons: Jump, Attack, Item, Special (Shadow Step for Nyx) · ❚❚ pause<br>Local Co-op on a phone: you play P1 by touch, P2 needs a keyboard.<br>':'<b>P1</b> A/D move · W jump · F attack · G item · S interact · E special &nbsp;|&nbsp; <b>P2</b> ←/→ move · ↑ jump · K/Num1 attack · L/Num2 item · ↓ interact · J/Num3 special · Gamepads supported · Esc pause<br>')+'Points are earned only in online rooms (level clears, round wins, boss kills). 1P and Local Co-op play anything already unlocked.</div>');
   const bt=pn.querySelector('#bt'),lvl=()=>+pn.querySelector('#lv').value;
-  bt.append(btn('1 Player',()=>startGame('solo',lvl()),'big'),btn('Local Co-op (2P)',()=>startGame('coop',lvl()),'big'),btn('Online (Host / Join)',showOnline,'big'));
+  bt.append(btn('1 Player',()=>startGame('solo',lvl()),'big'),btn(TOUCH?'Local Co-op (2P, P2 needs keyboard)':'Local Co-op (2P)',()=>startGame('coop',lvl()),'big'),btn('Online (Host / Join)',showOnline,'big'));
   pn.querySelector('#bt2').append(btn('Characters',()=>showChars(0)),btn('Levels',showLevels),btn('Profile',showProfile));
   bt.querySelector('button').focus();}
 let pendingUnlock=null;
@@ -512,8 +584,8 @@ function showChars(tab){screen='chars';screenArg=tab;const pn=panel('<h2>Charact
   const grid=pn.querySelector('#grid');
   GK.CHARS.forEach((ch,i)=>{const d=document.createElement('div');const un=isUnlocked(i),sel=save.sel[tab]===i;d.className='card'+(sel?' sel':'')+(un?'':' locked')+(ch.tier==='Legendary'?' legend':'');d.dataset.i=i;
     const c=document.createElement('canvas');c.width=60;c.height=38;d.appendChild(c);
-    d.insertAdjacentHTML('beforeend','<div class="nm">'+ch.name+'</div><div class="tier" style="background:'+GK.TIERS[ch.tier]+'">'+ch.tier+'</div><div class="st">♥'+ch.hp+' ⚔'+ch.atk+' ➜'+ch.speed+' ⤒'+ch.jump+'</div>'+
-      (ch.ability==='shadow'?'<div class="ab">Shadow Step</div>':ch.ability==='double'?'<div class="ab">Double Jump</div>':'')+'<div class="cost">'+(un?(sel?'Selected':(ch.cost?'Owned':'Free')):(pendingUnlock==='char'+i?'Click to confirm':ch.cost+' pts'))+'</div>');
+    d.insertAdjacentHTML('beforeend','<div class="nm">'+ch.name+'</div><div class="tier" style="background:'+GK.TIERS[ch.tier]+'">'+ch.tier+'</div><div class="st">♥'+ch.hp+' ⚔'+ch.atk+' ➜'+ch.speed+' ▲'+ch.jump+'</div>'+
+      (ch.ability==='shadow'?'<div class="ab">Shadow Step</div>':ch.ability==='double'?'<div class="ab">Double Jump</div>':'')+'<div class="cost">'+(un?(sel?'Selected':(ch.cost?'Owned':'Free')):(pendingUnlock==='char'+i?(TOUCH?'Tap to confirm':'Click to confirm'):ch.cost+' pts'))+'</div>');
     const g=c.getContext('2d');g.scale(1.25,1.25);drawChar(g,i,14,3,1,1,{});
     d.onclick=()=>{if(isUnlocked(i)){save.sel[tab]=i;persist();pendingUnlock=null;if(G.net&&tab===0)sendNet({t:'pick_char',char:i});showChars(tab);}else{const ok=requestUnlock('char',i,ch.cost);showChars(tab);}};
     grid.appendChild(d);});
@@ -522,7 +594,7 @@ const THEME_OF=n=>['Meadow','Whisperwood','Caverns','Crystal Depths','Shadow Kee
 function showLevels(){screen='levels';let h='<h2>Levels <span class="pts">'+(prof.pid?prof.points+' pts':'')+'</span> <span id="back"></span></h2><div class="lgrid">';
   for(let n=1;n<=GK.LEVEL_COUNT;n++){const un=levelUnlocked(n),c=GK.levelCost(n),d=GK.difficulty(n),tags=[GK.isBoss(n)?'BOSS':'',GK.DARK.indexOf(n)>=0?'Dark':'',GK.PLATES.indexOf(n)>=0?'Twin plates':''].filter(Boolean).join(' · ');
     h+='<div class="lcard'+(un?'':' locked')+(GK.isBoss(n)?' boss':'')+'" data-n="'+n+'"><b>Level '+n+'</b><div>'+THEME_OF(n)+'</div><div class="diff">'+'★'.repeat(d)+'☆'.repeat(5-d)+'</div><div class="tg">'+(tags||'&nbsp;')+'</div><div class="cost">'+
-      (un?'Unlocked':(pendingUnlock==='level'+n?'Click to confirm':(levelUnlocked(n-1)?c+' pts':'🔒 '+c+' pts')))+'</div></div>';}
+      (un?'Unlocked':(pendingUnlock==='level'+n?(TOUCH?'Tap to confirm':'Click to confirm'):(levelUnlocked(n-1)?c+' pts':'🔒 '+c+' pts')))+'</div></div>';}
   const pn=panel(h+'</div><div class="sub">Unlock in order. Cost = (40·d² + 20·(n−1)) × 1.5 on boss levels, rounded to 10. In online rooms the host’s unlocks decide.</div>');
   pn.querySelectorAll('.lcard').forEach(el=>el.onclick=()=>{const n=+el.dataset.n;if(levelUnlocked(n))return;if(!levelUnlocked(n-1)){flash('Unlock level '+(n-1)+' first');return;}requestUnlock('level',n,GK.levelCost(n));showLevels();});
   pn.querySelector('#back').append(btn('Back',()=>{pendingUnlock=null;showTitle();}));}
@@ -555,9 +627,9 @@ function togglePause(){if(G.victory){quitToTitle();return;}if(G.kind==='online')
 function quitToTitle(){leaveOnline();G.paused=false;G.victory=false;persist();showTitle();}
 // ---------- loop ----------
 let last=performance.now(),acc=0,lastSave=0;
-function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;try{if(G.mode==='play'){acc+=dt;let n=0;while(acc>=1/60&&n<6){tick(1/60);acc-=1/60;n++;}if(n>=6)acc=0;}render();}catch(e){console.error(e);G.errors.push(String(e&&e.stack||e));}requestAnimationFrame(frame);}
+function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;try{if(G.mode==='play'){acc+=dt;let n=0;while(acc>=1/60&&n<6){tick(1/60);acc-=1/60;n++;}if(n>=6)acc=0;}render();touchSync();}catch(e){console.error(e);G.errors.push(String(e&&e.stack||e));}requestAnimationFrame(frame);}
 window.GKT.startGame=startGame;window.GKT.tryShadowStep=tryShadowStep;window.GKT.showTitle=showTitle;window.GKT.completeLevel=completeLevel;window.GKT.loadLevel=loadLevel;
-window.GKT.online=online;showTitle();connectMeta();requestAnimationFrame(frame);
+window.GKT.online=online;window.GKT.TOUCH=TOUCH;window.GKT.touchClear=touchClear;showTitle();connectMeta();requestAnimationFrame(frame);
 })();
 </script>
 </body></html>
