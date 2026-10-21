@@ -45,7 +45,7 @@ const roster=r=>[...r.players.values()].map(p=>({id:p.id,slot:p.slot,name:p.name
 const bcast=(r,o,except)=>{const s=JSON.stringify(o);for(const p of r.players.values())if(p.id!==except&&p.ws.readyState===1)p.ws.send(s);};
 const now=()=>Date.now()/1000;
 const stats={stRejected:0,stepOk:0,stepRejected:0,tpRejected:0,pickRejected:0,openRejected:0,clearsValid:0,clearsInvalid:0,bossHits:0,rateDropped:0};
-function setLevel(r,n){r.levelN=n;r.L=n<=GK.LEVEL_COUNT?GK.genLevel(n):null;r.opened=new Set();r.levelT=now();r.keyOk=false;r.cpReached=new Set();
+function setLevel(r,n){r.levelN=n;r.L=n==='pond'?GK.genPond():n<=GK.LEVEL_COUNT?GK.genLevel(n):null;r.opened=new Set();r.levelT=now();r.keyOk=false;r.cpReached=new Set();
   r.tally={};r.picked=new Set();r.plateT={};r.awarded=false;
   r.boss=r.L&&r.L.boss?{hp:r.L.boss.hp,max:r.L.boss.hp,active:false,t0:0,dead:false}:null;
   for(const p of r.players.values())resetPos(r,p);}
@@ -115,8 +115,11 @@ function handle(me,r,msg,ip){const ws=me.ws;switch(msg.t){
     if(!me.profile)me.name=String(msg.name||'Guest').slice(0,12);me.char=charOk(me.profile,msg.char|0)?msg.char|0:0;me.slot=s;me.room=room;room.players.set(me.id,me);
     send(ws,{t:'joined',code:room.code,id:me.id,players:roster(room)});bcast(room,{t:'lobby',players:roster(room)},me.id);break;}
   case 'leave':leaveRoom(me);break;
+  case 'endside':{if(!r||r.host!==me.id||r.levelN!=='pond'||!r.started)return;r.started=false;r.L=null;bcast(r,{t:'runend',msg:'Back from Glimmer Pond.'});bcast(r,{t:'lobby',players:roster(r)});break;}
   case 'pick_char':{if(!r||r.started)return;const i=msg.char|0;if(!charOk(me.profile,i))return send(ws,{t:'err',msg:'Character is locked on your profile'});me.char=i;bcast(r,{t:'lobby',players:roster(r)});break;}
-  case 'start':{if(!r||r.host!==me.id||r.started)return;const n=Math.max(1,Math.min(15,msg.level|0||1));
+  case 'start':{if(!r||r.host!==me.id||r.started)return;
+    if(msg.level==='pond'){r.started=true;setLevel(r,'pond');bcast(r,{t:'start',level:'pond',players:roster(r)});break;}   // fishing side level: free, never awards points
+    const n=Math.max(1,Math.min(15,msg.level|0||1));
     if(!levelOk(me.profile,n))return send(ws,{t:'err',msg:'Level '+n+' is locked on the host profile'});
     r.started=true;setLevel(r,n);bcast(r,{t:'start',level:n,players:roster(r)});break;}
   case 'st':{if(!r||!r.L||!r.started)return;const x=+msg.x,y=+msg.y;if(!isFinite(x)||!isFinite(y))return;
@@ -129,7 +132,7 @@ function handle(me,r,msg,ip){const ws=me.ws;switch(msg.t){
     r.L.checkpoints.forEach((c,i)=>{if(Math.abs(x+GK.PW/2-c.x)<40)r.cpReached.add(i);});
     for(const pl of r.L.plates)if(x+GK.PW>pl.tx*T+2&&x<pl.tx*T+30&&y+GK.PH>GK.GROUND*T-14&&y+GK.PH<=GK.GROUND*T+2)r.plateT[pl.id]=t;
     if(r.boss&&!r.boss.active&&x+GK.PW>=r.L.boss.x0){r.boss.active=true;r.boss.t0=t;bcast(r,bossMsg(r));}
-    bcast(r,{t:'st',id:me.id,x,y,vx:msg.vx|0,vy:msg.vy|0,f:msg.f>0?1:-1,m:msg.m?1:0,a:msg.a?1:0,ih:msg.ih?1:0},me.id);break;}
+    bcast(r,{t:'st',id:me.id,x,y,vx:msg.vx|0,vy:msg.vy|0,f:msg.f>0?1:-1,m:msg.m?1:0,a:msg.a?1:0,ih:msg.ih?1:0,fs:Math.max(0,Math.min(5,msg.fs|0)),bx:Math.max(0,Math.min(r.L.w*T,msg.bx|0))},me.id);break;}
   case 'step':{if(!r||!r.L)return;const t=now(),ch=GK.CHARS[me.char];const fx=+msg.fx,fy=+msg.fy,tx=+msg.tx,ty=+msg.ty;let why=null;
     if(ch.ability!=='shadow')why='character cannot Shadow Step';else if(t-me.stepT<GK.STEP.cd-0.2)why='cooldown';
     else if(![fx,fy,tx,ty].every(isFinite))why='bad numbers';else if(Math.hypot(fx-me.pos.x,fy-me.pos.y)>48)why='start position mismatch';
@@ -144,9 +147,11 @@ function handle(me,r,msg,ip){const ws=me.ws;switch(msg.t){
   case 'ev':{if(!r)return;if(msg.k==='atk')return;const h=r.players.get(r.host);if(h&&h!==me)send(h.ws,{t:'ev',id:me.id,k:String(msg.k)});break;}
   case 'pick':{if(!r||r.host!==me.id||!r.L)return;const by=r.players.get(msg.by);if(!by)return;const c=center(by);
     if(msg.kind==='gem'){const g=r.L.gems[msg.id|0];if(!g||r.picked.has(g.id))return;if(Math.hypot(c.x-g.x,c.y-g.y)>60){stats.pickRejected++;return;}r.picked.add(g.id);r.tally[by.id]=(r.tally[by.id]||0)+1;}
+    else if(msg.kind==='life'){const l=(r.L.lives||[])[msg.id|0];if(!l||r.picked.has('l'+l.id))return;if(Math.hypot(c.x-l.x,c.y-l.y)>60){stats.pickRejected++;return;}r.picked.add('l'+l.id);stats.lifePicks=(stats.lifePicks||0)+1;}   // 1-UPs: tracked, never points
+    else if(msg.kind==='bonus'){const b=(r.L.bonus||[])[msg.id|0];if(!b||r.picked.has('x'+b.id))return;if(Math.hypot(c.x-b.x,c.y-b.y)>60){stats.pickRejected++;return;}r.picked.add('x'+b.id);stats.bonusPicks=(stats.bonusPicks||0)+1;}   // bonus rooms: items only, never points
     else if(msg.kind==='key'){const k=r.L.keys[0];if(r.boss&&!r.boss.dead){stats.pickRejected++;return;}if(Math.hypot(c.x-k.x,c.y-k.y)>60){stats.pickRejected++;return;}r.keyOk=true;}break;}
   case 'world':{if(!r||r.host!==me.id)return;if(Array.isArray(msg.opened)&&r.L)for(const id of msg.opened.map(String)){if(r.opened.has(id))continue;
-      if(id==='d0'?r.keyOk:id==='g0'?platesHeld(r):false)r.opened.add(id);else stats.openRejected++;}
+      if(id==='d0'?r.keyOk:id==='g0'?platesHeld(r):(id[0]==='b'&&Object.values(r.L.block).indexOf(id)>=0))r.opened.add(id);else stats.openRejected++;}
     bcast(r,msg,me.id);if(r.boss&&r.boss.active&&!r.boss.dead&&(!r.bossSync||now()-r.bossSync>2)){r.bossSync=now();bcast(r,bossMsg(r));}break;}
   case 'tp':{if(!r||r.host!==me.id||!r.L)return;const p=r.players.get(msg.id);if(!p)return;const x=+msg.x,y=+msg.y;
     if(!isFinite(x)||!isFinite(y)||!validTp(r,p,x,y)){stats.tpRejected++;send(ws,{t:'tpno',id:p.id,x:p.pos.x,y:p.pos.y});return;}
