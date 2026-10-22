@@ -19,7 +19,7 @@ for(const s of ['SIGINT','SIGTERM'])process.on(s,()=>{flush();process.exit(0);})
 const dayKey=()=>new Intl.DateTimeFormat('en-CA',{timeZone:CFG.tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const byNick=n=>Object.values(DB.profiles).find(p=>p.nick.toLowerCase()===String(n).toLowerCase());
 function rollDay(p){const d=dayKey();if(p.day!==d){p.day=d;p.dayEarned=0;}}
-function pub(p){rollDay(p);return{pid:p.pid,nick:p.nick,points:p.points,lifetime:p.lifetime,unlockedChars:p.chars,unlockedLevels:p.levels,dayEarned:p.dayEarned,cap:CFG.dailyCap,day:p.day,hasPin:!!p.pinHash,recent:(p.log||[]).slice(-5)};}
+function pub(p){rollDay(p);return{pid:p.pid,nick:p.nick,points:p.points,lifetime:p.lifetime,unlockedChars:p.chars,unlockedLevels:p.levels,dayEarned:p.dayEarned,cap:CFG.dailyCap,day:p.day,hasPin:!!p.pinHash,recent:(p.log||[]).slice(-5),fish:p.fish||null};}
 function grant(p,ev,pts){rollDay(p);const g=Math.max(0,Math.min(pts,CFG.dailyCap-p.dayEarned));p.dayEarned+=g;p.points+=g;p.lifetime+=g;
   p.log=(p.log||[]).slice(-49);p.log.push({t:Date.now(),ev,pts,granted:g});persist();return g;}
 const hashPin=(pin,salt)=>crypto.scryptSync(String(pin),salt,32).toString('hex');
@@ -45,7 +45,8 @@ const roster=r=>[...r.players.values()].map(p=>({id:p.id,slot:p.slot,name:p.name
 const bcast=(r,o,except)=>{const s=JSON.stringify(o);for(const p of r.players.values())if(p.id!==except&&p.ws.readyState===1)p.ws.send(s);};
 const now=()=>Date.now()/1000;
 const stats={stRejected:0,stepOk:0,stepRejected:0,tpRejected:0,pickRejected:0,openRejected:0,clearsValid:0,clearsInvalid:0,bossHits:0,rateDropped:0};
-function setLevel(r,n){r.levelN=n;r.L=n==='pond'?GK.genPond():n<=GK.LEVEL_COUNT?GK.genLevel(n):null;r.opened=new Set();r.levelT=now();r.keyOk=false;r.cpReached=new Set();
+const SIDE=n=>n==='pond'||n==='grotto';
+function setLevel(r,n){r.levelN=n;r.L=SIDE(n)?GK.levelData(n):n<=GK.LEVEL_COUNT?GK.genLevel(n):null;r.opened=new Set();r.levelT=now();r.keyOk=false;r.cpReached=new Set();
   r.tally={};r.picked=new Set();r.plateT={};r.awarded=false;
   r.boss=r.L&&r.L.boss?{hp:r.L.boss.hp,max:r.L.boss.hp,active:false,t0:0,dead:false}:null;
   for(const p of r.players.values())resetPos(r,p);}
@@ -115,10 +116,16 @@ function handle(me,r,msg,ip){const ws=me.ws;switch(msg.t){
     if(!me.profile)me.name=String(msg.name||'Guest').slice(0,12);me.char=charOk(me.profile,msg.char|0)?msg.char|0:0;me.slot=s;me.room=room;room.players.set(me.id,me);
     send(ws,{t:'joined',code:room.code,id:me.id,players:roster(room)});bcast(room,{t:'lobby',players:roster(room)},me.id);break;}
   case 'leave':leaveRoom(me);break;
-  case 'endside':{if(!r||r.host!==me.id||r.levelN!=='pond'||!r.started)return;r.started=false;r.L=null;bcast(r,{t:'runend',msg:'Back from Glimmer Pond.'});bcast(r,{t:'lobby',players:roster(r)});break;}
+  // fish log: personal collection saved on the profile. Sanitised to known ids only; it never touches points (fishing has no point path).
+  case 'fishsave':{if(!me.profile||!allow('fish:'+me.profile.pid,30,10e3))return;me.profile.fish=GK.cleanFish(msg.log);persist();break;}
+  case 'side':{if(!r||r.host!==me.id||!r.started||!SIDE(r.levelN)||msg.to!=='grotto')return;
+    if(me.profile?!GK.grottoOpen(me.profile.fish):!msg.ok)return send(ws,{t:'err',msg:'Catch '+GK.GROTTO.need+' species to open the Sunken Grotto'});
+    setLevel(r,'grotto');bcast(r,{t:'start',level:'grotto',players:roster(r)});break;}
+  case 'endside':{if(!r||r.host!==me.id||!SIDE(r.levelN)||!r.started)return;r.started=false;r.L=null;bcast(r,{t:'runend',msg:r.levelN==='grotto'?'Back from the Sunken Grotto.':'Back from Glimmer Pond.'});bcast(r,{t:'lobby',players:roster(r)});break;}
   case 'pick_char':{if(!r||r.started)return;const i=msg.char|0;if(!charOk(me.profile,i))return send(ws,{t:'err',msg:'Character is locked on your profile'});me.char=i;bcast(r,{t:'lobby',players:roster(r)});break;}
   case 'start':{if(!r||r.host!==me.id||r.started)return;
     if(msg.level==='pond'){r.started=true;setLevel(r,'pond');bcast(r,{t:'start',level:'pond',players:roster(r)});break;}   // fishing side level: free, never awards points
+    if(msg.level==='grotto'){if(me.profile?!GK.grottoOpen(me.profile.fish):!msg.ok)return send(ws,{t:'err',msg:'Catch '+GK.GROTTO.need+' species to open the Sunken Grotto'});r.started=true;setLevel(r,'grotto');bcast(r,{t:'start',level:'grotto',players:roster(r)});break;}   // deeper fishing area: unlocked by the fish log, never by points
     const n=Math.max(1,Math.min(15,msg.level|0||1));
     if(!levelOk(me.profile,n))return send(ws,{t:'err',msg:'Level '+n+' is locked on the host profile'});
     r.started=true;setLevel(r,n);bcast(r,{t:'start',level:n,players:roster(r)});break;}
@@ -132,7 +139,7 @@ function handle(me,r,msg,ip){const ws=me.ws;switch(msg.t){
     r.L.checkpoints.forEach((c,i)=>{if(Math.abs(x+GK.PW/2-c.x)<40)r.cpReached.add(i);});
     for(const pl of r.L.plates)if(x+GK.PW>pl.tx*T+2&&x<pl.tx*T+30&&y+GK.PH>GK.GROUND*T-14&&y+GK.PH<=GK.GROUND*T+2)r.plateT[pl.id]=t;
     if(r.boss&&!r.boss.active&&x+GK.PW>=r.L.boss.x0){r.boss.active=true;r.boss.t0=t;bcast(r,bossMsg(r));}
-    bcast(r,{t:'st',id:me.id,x,y,vx:msg.vx|0,vy:msg.vy|0,f:msg.f>0?1:-1,m:msg.m?1:0,a:msg.a?1:0,ih:msg.ih?1:0,fs:Math.max(0,Math.min(5,msg.fs|0)),bx:Math.max(0,Math.min(r.L.w*T,msg.bx|0))},me.id);break;}
+    bcast(r,{t:'st',id:me.id,x,y,vx:msg.vx|0,vy:msg.vy|0,f:msg.f>0?1:-1,m:msg.m?1:0,a:msg.a?1:0,ih:msg.ih?1:0,fs:Math.max(0,Math.min(5,msg.fs|0)),bx:Math.max(0,Math.min(r.L.w*T,msg.bx|0)),fk:Math.max(-1,Math.min(GK.CATCH.length-1,msg.fk==null?-1:msg.fk|0)),fg:Math.max(0,Math.min(2,msg.fg|0)),ff:Math.max(0,Math.min(7,msg.ff|0))},me.id);break;}
   case 'step':{if(!r||!r.L)return;const t=now(),ch=GK.CHARS[me.char];const fx=+msg.fx,fy=+msg.fy,tx=+msg.tx,ty=+msg.ty;let why=null;
     if(ch.ability!=='shadow')why='character cannot Shadow Step';else if(t-me.stepT<GK.STEP.cd-0.2)why='cooldown';
     else if(![fx,fy,tx,ty].every(isFinite))why='bad numbers';else if(Math.hypot(fx-me.pos.x,fy-me.pos.y)>48)why='start position mismatch';
